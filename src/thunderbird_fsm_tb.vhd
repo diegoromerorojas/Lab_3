@@ -57,28 +57,103 @@ end thunderbird_fsm_tb;
 architecture test_bench of thunderbird_fsm_tb is 
 	
 	component thunderbird_fsm is 
---	  port(
-		
---	  );
+    port(
+        i_clk, i_reset  :   in  std_logic;
+        i_left, i_right :   in  std_logic;
+        o_lights_L      :   out std_logic_vector(2 downto 0);
+        o_lights_R      :   out std_logic_vector(2 downto 0) 
+
+	);
 	end component thunderbird_fsm;
 
 	-- test I/O signals
-	
+        signal w_clk            :   std_logic   := '0';
+        signal w_reset          :   std_logic   := '0';
+        signal w_left           :   std_logic   := '0'; 
+        signal w_right          :   std_logic   := '0'; 
+        
+        signal w_lights_L       :   std_logic_vector (2 downto 0)   := "000"; 
+        signal w_lights_R       :   std_logic_vector (2 downto 0)   := "000";
+        
+        signal w_Q         : std_logic_vector (7 downto 0) := "10000000";
+	    signal w_Q_next    : std_logic_vector (7 downto 0) := "10000000";
+
 	-- constants
-	
+        constant k_clk_period : time := 10 ns;
 	
 begin
 	-- PORT MAPS ----------------------------------------
-	
+	uut: thunderbird_fsm   port map(
+	       i_clk       =>  w_clk,
+	       i_reset     =>  w_reset,
+	       
+	       i_left      =>  w_left,
+	       i_right     =>  w_right,
+	       
+	       o_lights_L  =>  w_lights_L,
+	       o_lights_R  =>  w_lights_R
+	);
 	-----------------------------------------------------
 	
 	-- PROCESSES ----------------------------------------	
     -- Clock process ------------------------------------
-    
+    clk_proc : process
+	begin
+		w_clk <= '0';
+        wait for k_clk_period/2;
+		w_clk <= '1';
+		wait for k_clk_period/2;
+	end process;
 	-----------------------------------------------------
 	
 	-- Test Plan Process --------------------------------
 	
+	-- Simulation process
+	-- Use 220 ns for simulation
+	sim_proc: process
+	begin
+		-- sequential timing		
+		w_reset <= '1';
+		wait for k_clk_period*1;
+		  assert w_lights_L = "000" AND w_lights_R = "000" report "bad reset" severity failure;
+		
+		w_reset <= '0';
+		wait for k_clk_period*1;
+		
+		-- LA light
+		w_left <= '1'; w_right <= '0'; wait for k_clk_period;
+            assert w_lights_L = "001" report "LA should be on" severity failure;
+		-- LB Light
+        wait for k_clk_period;
+            assert w_lights_L = "011" report "LA and LB should be on" severity failure;
+        -- LC Light
+        wait for k_clk_period; -- all lights on
+            assert w_lights_L = "111" report "should be green when car present" severity failure;
+
+        wait for k_clk_period;
+            assert w_lights_L = "000" report "should cycle back to LA on" severity failure;
+        wait for k_clk_period; -- time to go to red
+            assert w_lights_L = "001" report "did not go red after yellow" severity failure;
+        wait for k_clk_period; 
+            assert w_lights_L = "011" report "LA LB LC should be on" severity failure;
+        
+        -- RA Light
+        w_left <= '0'; w_right <= '1'; wait for k_clk_period*2;
+            assert w_lights_R = "000" report "RA should be on" severity failure;
+        -- RB Light
+        wait for k_clk_period;
+          assert w_lights_R = "001" report "RA and RB should be on" severity failure;
+        wait for k_clk_period;
+            assert w_lights_R = "011" report "RA RB and RC should be on" severity failure;
+        wait for k_clk_period;
+            assert w_lights_R = "111" report "Sequence should restart" severity failure;
+        -- RC Light
+        
+        -- Hazard Lights (ON)
+        
+        -- OFF State
+		wait;
+	end process;
 	-----------------------------------------------------	
 	
 end test_bench;
