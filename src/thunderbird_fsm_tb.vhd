@@ -109,49 +109,51 @@ begin
 	-- Test Plan Process --------------------------------
 	
 	-- Simulation process
-	-- Use 220 ns for simulation
 	sim_proc: process
 	begin
 		-- sequential timing		
+		-- asserts check for correct sequences for all L and R turn signal inputs as well as correct reset and cycle state.
 		w_reset <= '1';
-		wait for k_clk_period*1;
-		  assert w_lights_L = "000" AND w_lights_R = "000" report "bad reset" severity failure;
+		wait for k_clk_period;
+		  assert w_lights_L = "000" AND w_lights_R = "000" report "bad reset, all lights should be off" severity failure;
 		
 		w_reset <= '0';
-		wait for k_clk_period*1;
+		wait for k_clk_period;
 		
-		-- LA light
+		-- LA Light
 		w_left <= '1'; w_right <= '0'; wait for k_clk_period;
             assert w_lights_L = "001" report "LA should be on" severity failure;
-		-- LB Light
+		-- LA LB Lights
         wait for k_clk_period;
             assert w_lights_L = "011" report "LA and LB should be on" severity failure;
-        -- LC Light
+        -- LA LB LC Lights
         wait for k_clk_period; -- all lights on
-            assert w_lights_L = "111" report "should be green when car present" severity failure;
-
+            assert w_lights_L = "111" report "LA LB LC should be on" severity failure;
+        --check OFF state
         wait for k_clk_period;
-            assert w_lights_L = "000" report "should cycle back to LA on" severity failure;
-        wait for k_clk_period; -- time to go to red
-            assert w_lights_L = "001" report "did not go red after yellow" severity failure;
+            assert w_lights_L = "000" report "should cycle back to lights OFF" severity failure;
+        -- check 1 full cycle
         wait for k_clk_period; 
-            assert w_lights_L = "011" report "LA LB LC should be on" severity failure;
+            assert w_lights_L = "001" report "should cycle back to LA on" severity failure;
         
+        -- Lights OFF
+        w_left <= '0'; w_right <= '1'; wait for k_clk_period*3;
+            assert w_lights_R = "000" and w_lights_L = "000" report "All lights should be off" severity failure;
         -- RA Light
-        w_left <= '0'; w_right <= '1'; wait for k_clk_period*2;
-            assert w_lights_R = "000" report "RA should be on" severity failure;
+        wait for k_clk_period;
+          assert w_lights_R = "001" report "RA should be on" severity failure;
         -- RB Light
         wait for k_clk_period;
-          assert w_lights_R = "001" report "RA and RB should be on" severity failure;
-        wait for k_clk_period;
-            assert w_lights_R = "011" report "RA RB and RC should be on" severity failure;
-        wait for k_clk_period;
-            assert w_lights_R = "111" report "Sequence should restart" severity failure;
+            assert w_lights_R = "011" report "RA and RB should be on" severity failure;
         -- RC Light
-        
+        wait for k_clk_period;
+            assert w_lights_R = "111" report "RA RB and RC should be on" severity failure;
+        -- Full Cycle
+        wait for k_clk_period;
+            assert w_lights_R = "000" report "should cycle back to lights OFF" severity failure;
         -- Hazard Lights (ON)
-        
-        -- OFF State
+        w_left <= '1'; w_right <= '1'; wait for k_clk_period;
+            assert w_lights_R = "111" AND w_lights_L = "111" report "all lights should be on" severity failure;
 		wait;
 	end process;
 	-----------------------------------------------------	
